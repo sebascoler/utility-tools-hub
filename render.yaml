@@ -2,6 +2,7 @@ services:
   - type: web
     name: utility-tools-hub
     env: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
@@ -9,3 +10,4 @@ services:
         value: 3.12.1
       - key: REMOVEBG_API_KEY
         sync: false
+    autoDeploy: true
