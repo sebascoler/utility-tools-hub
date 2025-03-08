@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+venv/
+.DS_Store
+QR_GENERATOR/
+WhatsappLinker/
+image-processor-app/
