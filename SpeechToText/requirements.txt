@@ -1,5 +1,12 @@
-Flask==2.0.1
-Werkzeug==2.0.1
-SQLAlchemy==1.4.23
-Flask-SQLAlchemy==2.5.1
-Flask-Login==0.5.0
+Flask==3.0.2
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-Bcrypt==1.0.1
+python-dotenv==1.0.1
+requests==2.31.0
+Werkzeug==3.0.1
+PyPDF2==3.0.1
+pyhanko==0.23.1
+pyhanko-certvalidator==0.26.3
+together==0.2.8
+nltk==3.8.1
