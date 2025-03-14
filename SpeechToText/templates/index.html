@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to Text Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .username {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .button.recording {
+            background-color: #ff4444;
+        }
+        .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 100px;
+            background-color: #fff;
+            white-space: pre-wrap;
+        }
+        .status {
+            color: #666;
+            font-style: italic;
+            margin: 10px 0;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        #downloadButton {
+            background-color: #2196F3;
+        }
+        #clearButton {
+            background-color: #f44336;
+        }
+        #logoutButton {
+            background-color: #757575;
+        }
+        #saveButton {
+            background-color: #4CAF50;
+        }
+        .save-dialog, .view-dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-width: 80%;
+            width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .save-dialog input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .save-dialog .actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .transcripts {
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        .transcript-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .transcript-item {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .transcript-item:hover {
+            background: #f0f0f0;
+        }
+        .transcript-info {
+            flex-grow: 1;
+        }
+        .transcript-title {
+            font-weight: bold;
+            color: #333;
+        }
+        .transcript-date {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .delete-transcript {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .delete-transcript:hover {
+            background: #ff0000;
+        }
+        .view-dialog h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .view-dialog .content {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f8f8;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .view-dialog .meta {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        .dialog-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+        }
+        .dialog-close:hover {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Speech to Text Converter</h1>
+            <div class="user-info">
+                <span class="username">{{ current_user.username }}</span>
+                <a href="{{ url_for('logout') }}" class="button" id="logoutButton">Logout</a>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startButton" class="button">Start Recording</button>
+            <button id="stopButton" class="button" disabled>Stop Recording</button>
+        </div>
+
+        <p class="status" id="status">Click 'Start Recording' to begin</p>
+        <div id="output"></div>
+
+        <div class="actions">
+            <button id="saveButton" class="button" disabled>Save Transcript</button>
+            <button id="downloadButton" class="button" disabled>Download Text</button>
+            <button id="clearButton" class="button" disabled>Clear Text</button>
+        </div>
+
+        <div class="transcripts">
+            <h2>Saved Transcripts</h2>
+            <div class="transcript-list">
+                {% for transcript in transcripts %}
+                <div class="transcript-item" data-id="{{ transcript.id }}">
+                    <div class="transcript-info" onclick="viewTranscript({{ transcript.id }})">
+                        <div class="transcript-title">{{ transcript.title }}</div>
+                        <div class="transcript-date">{{ transcript.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                    </div>
+                    <button class="delete-transcript" onclick="deleteTranscript({{ transcript.id }}, event)">Delete</button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    
+    <div class="save-dialog" id="saveDialog">
+        <h3>Save Transcript</h3>
+        <input type="text" id="transcriptTitle" placeholder="Enter a title for your transcript">
+        <div class="actions">
+            <button class="button" onclick="closeSaveDialog()">Cancel</button>
+            <button class="button" onclick="saveTranscript()">Save</button>
+        </div>
+    </div>
+
+    <div class="view-dialog" id="viewDialog">
+        <button class="dialog-close" onclick="closeViewDialog()">&times;</button>
+        <h2 id="viewTitle"></h2>
+        <div class="meta" id="viewMeta"></div>
+        <div class="content" id="viewContent"></div>
+        <div class="actions">
+            <button class="button" onclick="loadTranscriptToEditor()">Load to Editor</button>
+            <button class="button" onclick="closeViewDialog()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const saveButton = document.getElementById('saveButton');
+        const downloadButton = document.getElementById('downloadButton');
+        const clearButton = document.getElementById('clearButton');
+        const status = document.getElementById('status');
+        const output = document.getElementById('output');
+        const overlay = document.getElementById('overlay');
+        const saveDialog = document.getElementById('saveDialog');
+        const viewDialog = document.getElementById('viewDialog');
+        const transcriptTitle = document.getElementById('transcriptTitle');
+        const viewTitle = document.getElementById('viewTitle');
+        const viewMeta = document.getElementById('viewMeta');
+        const viewContent = document.getElementById('viewContent');
+        
+        let recognition = null;
+        let finalTranscript = '';
+        let currentTranscript = null;
+        
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            
+            recognition.onstart = () => {
+                status.textContent = 'Listening... Speak now';
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                startButton.classList.add('recording');
+            };
+            
+            recognition.onerror = (event) => {
+                if (event.error === 'no-speech') {
+                    status.textContent = 'No speech was detected. Please try again.';
+                } else {
+                    status.textContent = `Error occurred: ${event.error}`;
+                }
+                resetButtons();
+            };
+            
+            recognition.onend = () => {
+                status.textContent = 'Click "Start Recording" to begin';
+                resetButtons();
+            };
+            
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + '\n';
+                        updateButtons();
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                output.innerHTML = finalTranscript + '<span style="color: #666;">' + interimTranscript + '</span>';
+            };
+        } else {
+            status.textContent = 'Speech recognition is not supported in this browser. Please try Chrome.';
+            startButton.disabled = true;
+        }
+        
+        function resetButtons() {
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            startButton.classList.remove('recording');
+            updateButtons();
+        }
+
+        function updateButtons() {
+            const hasText = finalTranscript.trim().length > 0;
+            downloadButton.disabled = !hasText;
+            clearButton.disabled = !hasText;
+            saveButton.disabled = !hasText;
+        }
+        
+        startButton.addEventListener('click', () => {
+            if (recognition) {
+                recognition.start();
+            }
+        });
+        
+        stopButton.addEventListener('click', () => {
+            if (recognition) {
+                recognition.stop();
+            }
+        });
+
+        downloadButton.addEventListener('click', () => {
+            const blob = new Blob([finalTranscript], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'transcription.txt';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        });
+
+        clearButton.addEventListener('click', () => {
+            finalTranscript = '';
+            output.textContent = '';
+            updateButtons();
+        });
+
+        saveButton.addEventListener('click', () => {
+            overlay.style.display = 'block';
+            saveDialog.style.display = 'block';
+            transcriptTitle.value = '';
+            transcriptTitle.focus();
+        });
+
+        function closeSaveDialog() {
+            overlay.style.display = 'none';
+            saveDialog.style.display = 'none';
+        }
+
+        function closeViewDialog() {
+            overlay.style.display = 'none';
+            viewDialog.style.display = 'none';
+            currentTranscript = null;
+        }
+
+        async function saveTranscript() {
+            const title = transcriptTitle.value.trim();
+            if (!title) {
+                alert('Please enter a title for your transcript');
+                return;
+            }
+
+            try {
+                const response = await fetch('/save_transcript', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        content: finalTranscript
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Add new transcript to the list
+                    const transcriptList = document.querySelector('.transcript-list');
+                    const newTranscript = document.createElement('div');
+                    newTranscript.className = 'transcript-item';
+                    newTranscript.dataset.id = result.id;
+                    newTranscript.innerHTML = `
+                        <div class="transcript-info" onclick="viewTranscript(${result.id})">
+                            <div class="transcript-title">${result.title}</div>
+                            <div class="transcript-date">${result.created_at}</div>
+                        </div>
+                        <button class="delete-transcript" onclick="deleteTranscript(${result.id}, event)">Delete</button>
+                    `;
+                    transcriptList.insertBefore(newTranscript, transcriptList.firstChild);
+                    closeSaveDialog();
+                } else {
+                    alert('Error saving transcript: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error saving transcript: ' + error.message);
+            }
+        }
+
+        async function viewTranscript(id) {
+            try {
+                const response = await fetch(`/get_transcript/${id}`);
+                const transcript = await response.json();
+
+                if (response.ok) {
+                    currentTranscript = transcript;
+                    viewTitle.textContent = transcript.title;
+                    viewMeta.textContent = `Created on ${transcript.created_at}`;
+                    viewContent.textContent = transcript.content;
+                    
+                    overlay.style.display = 'block';
+                    viewDialog.style.display = 'block';
+                } else {
+                    alert('Error loading transcript: ' + transcript.error);
+                }
+            } catch (error) {
+                alert('Error loading transcript: ' + error.message);
+            }
+        }
+
+        function loadTranscriptToEditor() {
+            if (currentTranscript) {
+                finalTranscript = currentTranscript.content;
+                output.textContent = finalTranscript;
+                updateButtons();
+                closeViewDialog();
+            }
+        }
+
+        async function deleteTranscript(id, event) {
+            event.stopPropagation();
+            
+            if (!confirm('Are you sure you want to delete this transcript?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/delete_transcript/${id}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const transcriptElement = document.querySelector(`.transcript-item[data-id="${id}"]`);
+                    transcriptElement.remove();
+                    if (currentTranscript && currentTranscript.id === id) {
+                        closeViewDialog();
+                    }
+                } else {
+                    const result = await response.json();
+                    alert('Error deleting transcript: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error deleting transcript: ' + error.message);
+            }
+        }
+
+        // Close dialogs when clicking overlay
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closeSaveDialog();
+                closeViewDialog();
+            }
+        });
+
+        // Handle Enter key in title input
+        transcriptTitle.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                saveTranscript();
+            }
+        });
+    </script>
+</body>
+</html>
