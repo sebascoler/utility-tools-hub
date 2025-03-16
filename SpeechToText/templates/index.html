@@ -1,627 +1,542 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speech to Text Converter</title>
+    <title>Speech to Text + Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .username {
-            color: #4CAF50;
-            font-weight: bold;
-        }
-        .button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 5px;
-            font-size: 16px;
-        }
-        .button:hover {
-            background-color: #45a049;
-        }
-        .button.recording {
-            background-color: #ff4444;
-        }
-        .button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        #output {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            min-height: 100px;
-            background-color: #fff;
-            white-space: pre-wrap;
-        }
-        .status {
-            color: #666;
-            font-style: italic;
-            margin: 10px 0;
-        }
-        .controls {
-            margin: 20px 0;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .actions {
-            margin-top: 10px;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        #downloadButton {
-            background-color: #2196F3;
-        }
-        #clearButton {
-            background-color: #f44336;
-        }
-        #logoutButton {
-            background-color: #757575;
-        }
-        #saveButton {
-            background-color: #4CAF50;
-        }
-        .save-dialog, .view-dialog {
+        .recording-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #dc3545;
             display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 1000;
-            max-width: 80%;
-            width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
+            animation: pulse 1s infinite;
         }
-        .save-dialog input {
-            width: 100%;
-            padding: 8px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
         }
-        .save-dialog .actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
+        
+        .analysis-card {
+            transition: all 0.3s ease;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
         }
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 999;
+        
+        .analysis-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
-        .transcripts {
-            margin-top: 30px;
-            border-top: 1px solid #ddd;
-            padding-top: 20px;
-        }
-        .transcript-list {
-            display: grid;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .transcript-item {
-            background: #f8f8f8;
-            padding: 15px;
-            border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .transcript-item:hover {
-            background: #f0f0f0;
-        }
-        .transcript-info {
-            flex-grow: 1;
-        }
-        .transcript-title {
-            font-weight: bold;
-            color: #333;
-        }
-        .transcript-date {
-            font-size: 0.9em;
-            color: #666;
-        }
-        .delete-transcript {
-            background: #ff4444;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            z-index: 2;
-        }
-        .delete-transcript:hover {
-            background: #ff0000;
-        }
-        .view-dialog h2 {
-            margin-top: 0;
-            color: #333;
-        }
-        .view-dialog .content {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f8f8;
-            border-radius: 4px;
-            white-space: pre-wrap;
-        }
-        .view-dialog .meta {
-            color: #666;
-            font-size: 0.9em;
-            margin-bottom: 20px;
-        }
-        .analysis-section {
-            margin-top: 20px;
-            border-top: 1px solid #ddd;
-            padding-top: 20px;
-        }
-        .analysis-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .analysis-tab {
-            padding: 10px 20px;
-            background: #f0f0f0;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: background-color 0.2s;
-        }
-        .analysis-tab.active {
-            background: #4CAF50;
+        
+        .analysis-header {
+            border-radius: 10px 10px 0 0;
+            padding: 1rem;
             color: white;
         }
+        
+        .insights { background-color: #0d6efd; }
+        .actions { background-color: #198754; }
+        .improvements { background-color: #6f42c1; }
+        .summary { background-color: #fd7e14; }
+        
         .analysis-content {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            font-size: 0.95rem;
         }
-        .analysis-panel {
+        
+        .analysis-content ul {
+            padding-left: 1.2rem;
+            margin-bottom: 0;
+        }
+        
+        .analysis-content li {
+            margin-bottom: 0.5rem;
+        }
+        
+        #transcription {
+            min-height: 100px;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        
+        .btn-record {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-record:hover {
+            transform: scale(1.1);
+        }
+        
+        .btn-record i {
+            font-size: 1.5rem;
+        }
+        
+        #analysisSection {
             display: none;
         }
-        .analysis-panel.active {
-            display: block;
+        
+        .loading-spinner {
+            display: none;
+            width: 3rem;
+            height: 3rem;
         }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #666;
+
+        .transcript-list {
+            margin-top: 2rem;
         }
-        .markdown h1 { font-size: 1.5em; margin: 0.5em 0; }
-        .markdown h2 { font-size: 1.3em; margin: 0.5em 0; }
-        .markdown h3 { font-size: 1.1em; margin: 0.5em 0; }
-        .markdown ul, .markdown ol { padding-left: 20px; }
-        .markdown p { margin: 0.5em 0; }
-        .markdown code { 
-            background: #f5f5f5;
-            padding: 2px 4px;
-            border-radius: 3px;
+
+        .transcript-item {
+            background: #fff;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
         }
-        .dialog-close {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            color: #666;
+
+        .transcript-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        .dialog-close:hover {
-            color: #333;
+
+        .transcript-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .transcript-date {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .transcript-actions {
+            margin-top: 1rem;
+        }
+
+        .btn-group-sm .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Speech to Text Converter</h1>
-            <div class="user-info">
-                <span class="username">{{ current_user.username }}</span>
-                <a href="{{ url_for('logout') }}" class="button" id="logoutButton">Logout</a>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Speech to Text + Analysis</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
             </div>
         </div>
+    </nav>
 
-        <div class="controls">
-            <button id="startButton" class="button">Start Recording</button>
-            <button id="stopButton" class="button" disabled>Stop Recording</button>
-        </div>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Recording Section -->
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <h5 class="card-title mb-4">Record Your Speech</h5>
+                        <div class="d-flex justify-content-center align-items-center gap-3 mb-3">
+                            <button id="recordButton" class="btn btn-record btn-danger" type="button">
+                                <i class="bi bi-mic-fill"></i>
+                            </button>
+                            <div class="recording-indicator"></div>
+                        </div>
+                        <div id="transcription" class="text-start"></div>
+                        <div class="d-flex justify-content-center gap-2 mt-3">
+                            <button id="saveButton" class="btn btn-primary" disabled type="button">
+                                <i class="bi bi-save"></i> Save Transcript
+                            </button>
+                            <button id="clearButton" class="btn btn-secondary" disabled type="button">
+                                <i class="bi bi-trash"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-        <p class="status" id="status">Click 'Start Recording' to begin</p>
-        <div id="output"></div>
-
-        <div class="actions">
-            <button id="saveButton" class="button" disabled>Save Transcript</button>
-            <button id="downloadButton" class="button" disabled>Download Text</button>
-            <button id="clearButton" class="button" disabled>Clear Text</button>
-        </div>
-
-        <div class="transcripts">
-            <h2>Saved Transcripts</h2>
-            <div class="transcript-list">
-                {% for transcript in transcripts %}
-                <div class="transcript-item" data-id="{{ transcript.id }}">
-                    <div class="transcript-info" onclick="viewTranscript({{ transcript.id }})">
+                <!-- Transcripts List -->
+                <div class="transcript-list" id="transcriptList">
+                    <h5 class="mb-4">Saved Transcripts</h5>
+                    {% for transcript in transcripts %}
+                    <div class="transcript-item" data-id="{{ transcript.id }}">
                         <div class="transcript-title">{{ transcript.title }}</div>
                         <div class="transcript-date">{{ transcript.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                        <div class="transcript-actions">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary transcript-action" data-action="view" data-id="{{ transcript.id }}" type="button">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                                <button class="btn btn-outline-success transcript-action" data-action="analyze" data-id="{{ transcript.id }}" type="button">
+                                    <i class="bi bi-graph-up"></i> Analyze
+                                </button>
+                                <button class="btn btn-outline-danger transcript-action" data-action="delete" data-id="{{ transcript.id }}" type="button">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <button class="delete-transcript" onclick="deleteTranscript({{ transcript.id }}, event)">Delete</button>
+                    {% endfor %}
                 </div>
-                {% endfor %}
+
+                <!-- Analysis Section -->
+                <div id="analysisSection" class="mt-4" style="display: none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Análisis de Texto</h5>
+                            <div class="text-center mb-4">
+                                <div class="spinner-border loading-spinner text-primary" role="status" style="display: none;">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                                <p class="loading-text text-muted" style="display: none;">
+                                    Por favor espere mientras analizamos su texto...
+                                </p>
+                            </div>
+                            
+                            <div class="analysis-content">
+                                <div class="analysis-section mb-4">
+                                    <h6>Análisis</h6>
+                                    <div id="analysisContent" class="analysis-content"></div>
+                                </div>
+                                
+                                <div class="analysis-section mb-4">
+                                    <h6>Elementos de Acción</h6>
+                                    <div id="actionItemsContent" class="analysis-content"></div>
+                                </div>
+                                
+                                <div class="analysis-section mb-4">
+                                    <h6>Sugerencias de Mejora</h6>
+                                    <div id="improvementsContent" class="analysis-content"></div>
+                                </div>
+                                
+                                <div class="analysis-section">
+                                    <h6>Resumen</h6>
+                                    <div id="summaryContent" class="analysis-content"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="overlay" id="overlay"></div>
-    
-    <div class="save-dialog" id="saveDialog">
-        <h3>Save Transcript</h3>
-        <input type="text" id="transcriptTitle" placeholder="Enter a title for your transcript">
-        <div class="actions">
-            <button class="button" onclick="closeSaveDialog()">Cancel</button>
-            <button class="button" onclick="saveTranscript()">Save</button>
-        </div>
-    </div>
-
-    <div class="view-dialog" id="viewDialog">
-        <button class="dialog-close" onclick="closeViewDialog()">&times;</button>
-        <h2 id="viewTitle"></h2>
-        <div class="meta" id="viewMeta"></div>
-        <div class="content" id="viewContent"></div>
-        <div class="actions">
-            <button class="button" onclick="loadTranscriptToEditor()">Load to Editor</button>
-            <button class="button" onclick="analyzeTranscript()">Analyze Brainstorming</button>
-            <button class="button" onclick="closeViewDialog()">Close</button>
-        </div>
-        <div class="analysis-section" id="analysisSection" style="display: none;">
-            <h3>AI Analysis</h3>
-            <div class="loading" id="analysisLoading">Analyzing your brainstorming session...</div>
-            <div id="analysisContent" style="display: none;">
-                <div class="analysis-tabs">
-                    <button class="analysis-tab active" onclick="showAnalysisPanel('overview')">Overview</button>
-                    <button class="analysis-tab" onclick="showAnalysisPanel('actions')">Action Items</button>
-                    <button class="analysis-tab" onclick="showAnalysisPanel('suggestions')">Suggestions</button>
+    <!-- Save Dialog -->
+    <div class="modal fade" id="saveDialog" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Save Transcript</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="analysis-content">
-                    <div id="overviewPanel" class="analysis-panel markdown active"></div>
-                    <div id="actionsPanel" class="analysis-panel markdown"></div>
-                    <div id="suggestionsPanel" class="analysis-panel markdown"></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="transcriptTitle" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="transcriptTitle" placeholder="Enter a title">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveTranscript()">Save</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const startButton = document.getElementById('startButton');
-        const stopButton = document.getElementById('stopButton');
-        const saveButton = document.getElementById('saveButton');
-        const downloadButton = document.getElementById('downloadButton');
-        const clearButton = document.getElementById('clearButton');
-        const status = document.getElementById('status');
-        const output = document.getElementById('output');
-        const overlay = document.getElementById('overlay');
-        const saveDialog = document.getElementById('saveDialog');
-        const viewDialog = document.getElementById('viewDialog');
-        const transcriptTitle = document.getElementById('transcriptTitle');
-        const viewTitle = document.getElementById('viewTitle');
-        const viewMeta = document.getElementById('viewMeta');
-        const viewContent = document.getElementById('viewContent');
-        
-        let recognition = null;
+        let recognition;
         let finalTranscript = '';
-        let currentTranscript = null;
+        const saveDialog = new bootstrap.Modal(document.getElementById('saveDialog'));
         
-        if ('webkitSpeechRecognition' in window) {
+        // Initialize Web Speech API
+        function initSpeechRecognition() {
             recognition = new webkitSpeechRecognition();
             recognition.continuous = true;
             recognition.interimResults = true;
+            recognition.lang = 'es-ES';
             
-            recognition.onstart = () => {
-                status.textContent = 'Listening... Speak now';
-                startButton.disabled = true;
-                stopButton.disabled = false;
-                startButton.classList.add('recording');
-            };
+            recognition.onstart = onstart;
+            recognition.onerror = onerror;
+            recognition.onend = onend;
+            recognition.onresult = onresult;
             
-            recognition.onerror = (event) => {
-                if (event.error === 'no-speech') {
-                    status.textContent = 'No speech was detected. Please try again.';
-                } else {
-                    status.textContent = `Error occurred: ${event.error}`;
-                }
-                resetButtons();
-            };
-            
-            recognition.onend = () => {
-                status.textContent = 'Click "Start Recording" to begin';
-                resetButtons();
-            };
-            
-            recognition.onresult = (event) => {
-                let interimTranscript = '';
-                
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        finalTranscript += transcript + '\n';
-                        updateButtons();
-                    } else {
-                        interimTranscript += transcript;
-                    }
-                }
-                
-                output.innerHTML = finalTranscript + '<span style="color: #666;">' + interimTranscript + '</span>';
-            };
-        } else {
-            status.textContent = 'Speech recognition is not supported in this browser. Please try Chrome.';
-            startButton.disabled = true;
-        }
-        
-        function resetButtons() {
-            startButton.disabled = false;
-            stopButton.disabled = true;
-            startButton.classList.remove('recording');
             updateButtons();
         }
-
-        function updateButtons() {
-            const hasText = finalTranscript.trim().length > 0;
-            downloadButton.disabled = !hasText;
-            clearButton.disabled = !hasText;
-            saveButton.disabled = !hasText;
+        
+        // Add event listeners for transcript actions
+        function initTranscriptActions() {
+            document.addEventListener('click', function(e) {
+                const button = e.target.closest('.transcript-action');
+                if (!button) return;
+                
+                e.preventDefault();
+                const action = button.dataset.action;
+                const id = parseInt(button.dataset.id, 10);
+                
+                switch (action) {
+                    case 'view':
+                        viewTranscript(id);
+                        break;
+                    case 'analyze':
+                        analyzeTranscript(id);
+                        break;
+                    case 'delete':
+                        deleteTranscript(id);
+                        break;
+                }
+            });
         }
         
-        startButton.addEventListener('click', () => {
-            if (recognition) {
-                recognition.start();
-            }
+        // Initialize everything when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initSpeechRecognition();
+            initTranscriptActions();
         });
         
-        stopButton.addEventListener('click', () => {
-            if (recognition) {
+        function onstart() {
+            updateButtons();
+        }
+        
+        function onerror(event) {
+            // Only show error for actual microphone issues
+            if (event.error === 'audio-capture') {
+                alert('No microphone was found. Ensure that a microphone is installed.');
+            } else if (event.error === 'not-allowed') {
+                alert('Permission to use microphone was denied.');
+            } else if (event.error === 'network') {
+                alert('Network error occurred.');
+            }
+            // Don't show error for no-speech as it's common when stopping
+            updateButtons();
+        }
+        
+        function onend() {
+            updateButtons();
+        }
+        
+        function onresult(event) {
+            let interimTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+            document.getElementById('transcription').textContent = finalTranscript + interimTranscript;
+            updateButtons();
+        }
+        
+        function updateButtons() {
+            const isRecording = recognition && recognition.recording;
+            document.getElementById('recordButton').classList.toggle('btn-danger', !isRecording);
+            document.getElementById('recordButton').classList.toggle('btn-warning', isRecording);
+            document.getElementById('recordButton').querySelector('i').classList.toggle('bi-mic-fill', !isRecording);
+            document.getElementById('recordButton').querySelector('i').classList.toggle('bi-stop-fill', isRecording);
+            document.querySelector('.recording-indicator').style.display = isRecording ? 'block' : 'none';
+            document.getElementById('saveButton').disabled = !finalTranscript;
+        }
+        
+        document.getElementById('recordButton').addEventListener('click', function() {
+            if (!recognition.recording) {
+                try {
+                    finalTranscript = '';
+                    document.getElementById('transcription').textContent = '';
+                    document.getElementById('analysisSection').style.display = 'none';
+                    recognition.start();
+                } catch (err) {
+                    console.error('Error accessing microphone:', err);
+                    alert('Error accessing microphone. Please ensure you have granted permission.');
+                }
+            } else {
                 recognition.stop();
             }
         });
-
-        downloadButton.addEventListener('click', () => {
-            const blob = new Blob([finalTranscript], { type: 'text/plain' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'transcription.txt';
-            a.click();
-            window.URL.revokeObjectURL(url);
+        
+        document.getElementById('saveButton').addEventListener('click', function() {
+            saveDialog.show();
         });
-
-        clearButton.addEventListener('click', () => {
-            finalTranscript = '';
-            output.textContent = '';
-            updateButtons();
-        });
-
-        saveButton.addEventListener('click', () => {
-            overlay.style.display = 'block';
-            saveDialog.style.display = 'block';
-            transcriptTitle.value = '';
-            transcriptTitle.focus();
-        });
-
-        function closeSaveDialog() {
-            overlay.style.display = 'none';
-            saveDialog.style.display = 'none';
-        }
-
-        function closeViewDialog() {
-            overlay.style.display = 'none';
-            viewDialog.style.display = 'none';
-            currentTranscript = null;
-        }
-
+        
         async function saveTranscript() {
-            const title = transcriptTitle.value.trim();
-            if (!title) {
-                alert('Please enter a title for your transcript');
-                return;
-            }
-
             try {
+                const title = document.getElementById('transcriptTitle').value;
+                if (!title) {
+                    alert('Please enter a title for the transcript.');
+                    return;
+                }
+                
                 const response = await fetch('/save_transcript', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         title: title,
                         content: finalTranscript
                     })
                 });
-
-                const result = await response.json();
-
+                
+                const data = await response.json();
+                
                 if (response.ok) {
-                    // Add new transcript to the list
-                    const transcriptList = document.querySelector('.transcript-list');
                     const newTranscript = document.createElement('div');
-                    newTranscript.className = 'transcript-item';
-                    newTranscript.dataset.id = result.id;
+                    newTranscript.className = 'transcript-item card mb-3';
+                    newTranscript.dataset.id = data.id;
+                    
                     newTranscript.innerHTML = `
-                        <div class="transcript-info" onclick="viewTranscript(${result.id})">
-                            <div class="transcript-title">${result.title}</div>
-                            <div class="transcript-date">${result.created_at}</div>
+                        <div class="card-body">
+                            <h5 class="card-title">${data.title}</h5>
+                            <div class="transcript-date">${data.created_at}</div>
+                            <div class="transcript-actions">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary transcript-action" data-action="view" data-id="${data.id}" type="button">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                    <button class="btn btn-outline-success transcript-action" data-action="analyze" data-id="${data.id}" type="button">
+                                        <i class="bi bi-graph-up"></i> Analyze
+                                    </button>
+                                    <button class="btn btn-outline-danger transcript-action" data-action="delete" data-id="${data.id}" type="button">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <button class="delete-transcript" onclick="deleteTranscript(${result.id}, event)">Delete</button>
                     `;
+                    
+                    const transcriptList = document.getElementById('transcriptList');
                     transcriptList.insertBefore(newTranscript, transcriptList.firstChild);
-                    closeSaveDialog();
+                    
+                    // Clear form and close dialog
+                    document.getElementById('transcriptTitle').value = '';
+                    saveDialog.hide();
+                    
                 } else {
-                    alert('Error saving transcript: ' + result.error);
+                    throw new Error(data.error || 'Failed to save transcript');
                 }
+                
             } catch (error) {
-                alert('Error saving transcript: ' + error.message);
+                console.error('Error:', error);
+                alert('An error occurred while saving the transcript. Please try again.');
             }
         }
-
+        
         async function viewTranscript(id) {
             try {
                 const response = await fetch(`/get_transcript/${id}`);
-                const transcript = await response.json();
-
+                const data = await response.json();
+                
                 if (response.ok) {
-                    currentTranscript = transcript;
-                    viewTitle.textContent = transcript.title;
-                    viewMeta.textContent = `Created on ${transcript.created_at}`;
-                    viewContent.textContent = transcript.content;
-                    
-                    overlay.style.display = 'block';
-                    viewDialog.style.display = 'block';
+                    finalTranscript = data.content;
+                    document.getElementById('transcription').textContent = data.content;
+                    document.getElementById('analysisSection').style.display = 'none';
+                    updateButtons();
                 } else {
-                    alert('Error loading transcript: ' + transcript.error);
+                    throw new Error(data.error || 'Failed to load transcript');
                 }
+                
             } catch (error) {
-                alert('Error loading transcript: ' + error.message);
+                console.error('Error:', error);
+                alert('An error occurred while loading the transcript. Please try again.');
             }
         }
-
-        function loadTranscriptToEditor() {
-            if (currentTranscript) {
-                finalTranscript = currentTranscript.content;
-                output.textContent = finalTranscript;
-                updateButtons();
-                closeViewDialog();
+        
+        async function analyzeTranscript(id) {
+            try {
+                // Show loading indicators
+                const spinner = document.querySelector('.loading-spinner');
+                const loadingText = document.querySelector('.loading-text');
+                const analysisContent = document.querySelector('.analysis-content');
+                
+                spinner.style.display = 'inline-block';
+                loadingText.style.display = 'block';
+                analysisContent.style.display = 'none';
+                
+                // Show and scroll to analysis section
+                const analysisSection = document.getElementById('analysisSection');
+                analysisSection.style.display = 'block';
+                analysisSection.scrollIntoView({ behavior: 'smooth' });
+                
+                const response = await fetch(`/analyze_transcript/${id}`);
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to analyze transcript');
+                }
+                
+                const data = await response.json();
+                
+                // Format and display analysis results
+                const sections = {
+                    'analysisContent': data.analysis,
+                    'actionItemsContent': data.action_items,
+                    'improvementsContent': data.suggestions,
+                    'summaryContent': data.summary
+                };
+                
+                for (const [id, content] of Object.entries(sections)) {
+                    document.getElementById(id).innerHTML = formatContent(content);
+                }
+                
+                // Hide loading indicators and show content
+                spinner.style.display = 'none';
+                loadingText.style.display = 'none';
+                analysisContent.style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while analyzing the transcript. Please try again.');
+                
+                // Hide loading indicators on error
+                document.querySelector('.loading-spinner').style.display = 'none';
+                document.querySelector('.loading-text').style.display = 'none';
             }
         }
-
-        async function deleteTranscript(id, event) {
-            event.stopPropagation();
-            
+        
+        async function deleteTranscript(id) {
             if (!confirm('Are you sure you want to delete this transcript?')) {
                 return;
             }
-
+            
             try {
                 const response = await fetch(`/delete_transcript/${id}`, {
                     method: 'POST'
                 });
-
-                if (response.ok) {
-                    const transcriptElement = document.querySelector(`.transcript-item[data-id="${id}"]`);
-                    transcriptElement.remove();
-                    if (currentTranscript && currentTranscript.id === id) {
-                        closeViewDialog();
-                    }
-                } else {
-                    const result = await response.json();
-                    alert('Error deleting transcript: ' + result.error);
-                }
-            } catch (error) {
-                alert('Error deleting transcript: ' + error.message);
-            }
-        }
-
-        async function analyzeTranscript() {
-            if (!currentTranscript) return;
-            
-            const analysisSection = document.getElementById('analysisSection');
-            const analysisLoading = document.getElementById('analysisLoading');
-            const analysisContent = document.getElementById('analysisContent');
-            
-            analysisSection.style.display = 'block';
-            analysisLoading.style.display = 'block';
-            analysisContent.style.display = 'none';
-            
-            try {
-                const response = await fetch(`/analyze_transcript/${currentTranscript.id}`);
-                const result = await response.json();
                 
                 if (response.ok) {
-                    // Display the analysis results in their respective panels
-                    document.getElementById('overviewPanel').innerHTML = result.analysis;
-                    document.getElementById('actionsPanel').innerHTML = result.action_items;
-                    document.getElementById('suggestionsPanel').innerHTML = result.suggestions;
-                    
-                    analysisLoading.style.display = 'none';
-                    analysisContent.style.display = 'block';
+                    const transcriptElement = document.querySelector(`.transcript-item[data-id="${id}"]`);
+                    if (transcriptElement) {
+                        transcriptElement.remove();
+                    }
                 } else {
-                    throw new Error(result.error || 'Failed to analyze text');
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to delete transcript');
                 }
+                
             } catch (error) {
-                analysisLoading.textContent = 'Error analyzing text: ' + error.message;
+                console.error('Error:', error);
+                alert('An error occurred while deleting the transcript. Please try again.');
             }
-        }
-
-        function showAnalysisPanel(panelName) {
-            // Update tab styling
-            document.querySelectorAll('.analysis-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            const activeTab = document.querySelector(`.analysis-tab[onclick*="${panelName}"]`);
-            if (activeTab) activeTab.classList.add('active');
-            
-            // Show selected panel
-            document.querySelectorAll('.analysis-panel').forEach(panel => {
-                panel.classList.remove('active');
-            });
-            document.getElementById(`${panelName}Panel`).classList.add('active');
         }
         
-        // Close dialogs when clicking overlay
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                closeSaveDialog();
-                closeViewDialog();
-            }
-        });
-
-        // Handle Enter key in title input
-        transcriptTitle.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                saveTranscript();
-            }
-        });
+        function formatContent(content) {
+            if (!content) return '<p class="text-muted">No content available.</p>';
+            return content.replace(/\n/g, '<br>');
+        }
     </script>
 </body>
 </html>

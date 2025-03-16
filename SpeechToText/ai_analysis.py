@@ -20,20 +20,24 @@ def _get_completion(prompt: str, max_tokens: int = 1000) -> str:
         data = {
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
             "prompt": prompt,
-            "max_tokens": max_tokens,
             "temperature": 0.7,
             "top_p": 0.7,
             "top_k": 50,
             "repetition_penalty": 1.1,
-            "stop": ["</s>", "[/INST]"]
+            "max_tokens": max_tokens
         }
         
+        print(f"Making API request with data: {data}")  # Debug log
+        
         response = requests.post(
-            "https://api.together.xyz/v1/completions",
+            "https://api.together.ai/v1/completions",
             headers=headers,
             json=data,
             timeout=30
         )
+        
+        print(f"API response status: {response.status_code}")  # Debug log
+        print(f"API response text: {response.text}")  # Debug log
         
         if response.status_code != 200:
             raise Exception(f"API returned status code {response.status_code}: {response.text}")
@@ -45,25 +49,22 @@ def _get_completion(prompt: str, max_tokens: int = 1000) -> str:
         return result['choices'][0]['text'].strip()
             
     except Exception as e:
+        print(f"API error: {str(e)}")  # Debug log
         raise Exception(f"Together.ai API error: {str(e)}")
 
 def analyze_brainstorming(text: str) -> Dict[str, Any]:
     """
-    Analyze brainstorming session using Mixtral-8x7B.
+    Analyze transcribed text using Mixtral-8x7B.
     Returns insights in a conversational format.
     """
     try:
-        prompt = f"""<s>[INST] You are an expert at analyzing document management systems and workflows.
-        
-Analyze the following feedback about our document management system and provide:
-1. A concise summary of the main issues
-2. Key patterns and recurring problems identified
-3. Most critical issues that need immediate attention
-4. Potential quick wins vs long-term improvements
+        prompt = f"""<s>[INST] Eres un asistente experto en análisis de texto. Por favor analiza este texto y proporciona:
+1. Un resumen conciso
+2. Ideas y conceptos principales discutidos
+3. Puntos importantes que necesitan atención
+4. Patrones o temas notables
 
-Format your response in a clear, organized way that's easy to read.
-
-Text to analyze:
+Texto a analizar:
 {text} [/INST]"""
 
         analysis = _get_completion(prompt)
@@ -73,6 +74,7 @@ Text to analyze:
         }
 
     except Exception as e:
+        print(f"Analysis error: {str(e)}")  # Debug log
         return {
             'success': False,
             'error': str(e)
@@ -84,27 +86,14 @@ def generate_action_items(text: str) -> Dict[str, Any]:
     Returns a prioritized list of actions.
     """
     try:
-        prompt = f"""<s>[INST] You are an expert at improving document management systems.
-        
-Review this feedback about our document system and create a prioritized action plan. Group actions into:
-1. Quick Wins (This Week):
-   - Focus on immediate user pain points
-   - Simple UI/UX improvements
-   - Quick bug fixes
+        prompt = f"""<s>[INST] Eres un asistente experto en planificación. Revisa este texto y crea una lista priorizada de acciones. Enfócate en:
+1. Acciones inmediatas (Alta prioridad)
+2. Próximos pasos
+3. Consideraciones futuras
 
-2. Short-term Actions (This Month):
-   - Performance improvements
-   - Feature enhancements
-   - Security updates
+Formatea tu respuesta como una lista clara y accionable.
 
-3. Long-term Projects (Beyond):
-   - Major architectural changes
-   - New feature development
-   - Infrastructure upgrades
-
-Format your response as a clear, actionable list with specific tasks and priorities.
-
-Text to analyze:
+Texto a analizar:
 {text} [/INST]"""
 
         action_items = _get_completion(prompt)
@@ -114,6 +103,7 @@ Text to analyze:
         }
 
     except Exception as e:
+        print(f"Action items error: {str(e)}")  # Debug log
         return {
             'success': False,
             'error': str(e)
@@ -122,35 +112,18 @@ Text to analyze:
 def suggest_improvements(text: str) -> Dict[str, Any]:
     """
     Generate improvement suggestions using Mixtral-8x7B.
-    Returns detailed suggestions for enhancing the system.
+    Returns detailed suggestions for the discussed topics.
     """
     try:
-        prompt = f"""<s>[INST] You are an expert at improving document management and PDF handling systems.
-        
-Review this feedback and suggest improvements. Focus on:
-1. User Experience
-   - Interface improvements
-   - Workflow optimization
-   - Mobile responsiveness
+        prompt = f"""<s>[INST] Eres un asistente experto en mejora continua. Revisa este texto y sugiere mejoras. Enfócate en:
+1. Áreas de oportunidad
+2. Posibles mejoras
+3. Enfoques alternativos
+4. Consideraciones adicionales
 
-2. Performance
-   - Upload/download speeds
-   - Processing efficiency
-   - Resource usage
+Formatea tu respuesta con sugerencias claras y accionables.
 
-3. Features
-   - Missing capabilities
-   - Enhancement opportunities
-   - Integration possibilities
-
-4. Security & Compliance
-   - Data protection
-   - Access control
-   - Audit trails
-
-Format your response as specific, actionable suggestions with clear benefits.
-
-Text to analyze:
+Texto a analizar:
 {text} [/INST]"""
 
         suggestions = _get_completion(prompt)
@@ -160,6 +133,7 @@ Text to analyze:
         }
 
     except Exception as e:
+        print(f"Suggestions error: {str(e)}")  # Debug log
         return {
             'success': False,
             'error': str(e)
@@ -168,20 +142,18 @@ Text to analyze:
 def summarize_text(text: str) -> Dict[str, Any]:
     """
     Generate a concise summary using Mixtral-8x7B.
-    Perfect for getting a quick overview of user feedback.
+    Perfect for getting a quick overview of spoken content.
     """
     try:
-        prompt = f"""<s>[INST] You are an expert at summarizing technical feedback about document management systems.
-        
-Summarize the following feedback, focusing on:
-1. Core issues and pain points
-2. Suggested improvements
-3. User needs and preferences
-4. Technical requirements
+        prompt = f"""<s>[INST] Eres un asistente experto en síntesis de información. Crea un resumen conciso del siguiente texto, enfocándote en:
+1. Puntos principales discutidos
+2. Conclusiones clave
+3. Contexto importante
+4. Detalles notables
 
-Keep the summary concise but include all critical points.
+Incluye todos los puntos críticos.
 
-Text to summarize:
+Texto a resumir:
 {text} [/INST]"""
 
         summary = _get_completion(prompt)
@@ -191,6 +163,7 @@ Text to summarize:
         }
 
     except Exception as e:
+        print(f"Summary error: {str(e)}")  # Debug log
         return {
             'success': False,
             'error': str(e)
